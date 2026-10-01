@@ -9,6 +9,7 @@ const RENDER_EVERY_MS = 5000;
 let arrivals = {};
 let fetchedAt = null;
 let error = null;
+const openRoutes = new Set(); // route ids whose breakdown is expanded; survives re-renders
 
 async function fetchStop(code) {
   const res = await fetch(API + code);
@@ -81,7 +82,7 @@ function routeHtml(route, opts, rec) {
   return `<section class="route ${isPick ? "pick" : ""}">
     <div class="head"><h2>${esc(route.name)}</h2><div class="eta">${best ? clock(best.homeAt) : "—"}</div></div>
     <div class="chips">${chips}</div>
-    <details><summary>~${route.rideMin + legsTotal(route)} min after boarding</summary><ul>${legs}</ul></details>
+    <details data-route="${route.id}"${openRoutes.has(route.id) ? " open" : ""}><summary>~${route.rideMin + legsTotal(route)} min after boarding</summary><ul>${legs}</ul></details>
   </section>`;
 }
 
@@ -105,6 +106,12 @@ function render() {
 }
 
 document.getElementById("refresh").addEventListener("click", refresh);
+// "toggle" doesn't bubble, so listen in the capture phase.
+document.getElementById("app").addEventListener(
+  "toggle",
+  (e) => (e.target.open ? openRoutes.add(e.target.dataset.route) : openRoutes.delete(e.target.dataset.route)),
+  true,
+);
 document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && refresh());
 refresh();
 setInterval(refresh, FETCH_EVERY_MS);
